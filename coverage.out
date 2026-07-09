@@ -1,0 +1,9 @@
+mode: atomic
+github.com/ThienKim52/health-check/internal/repository/link.go:23.61,25.2 1 2
+github.com/ThienKim52/health-check/internal/repository/link.go:28.100,30.2 1 2
+github.com/ThienKim52/health-check/internal/repository/link.go:33.91,35.2 1 0
+github.com/ThienKim52/health-check/internal/repository/link.go:38.86,43.2 2 0
+github.com/ThienKim52/health-check/internal/repository/link.go:46.63,50.2 1 0
+github.com/ThienKim52/health-check/internal/repository/urlstorage.go:19.48,21.2 1 2
+github.com/ThienKim52/health-check/internal/repository/urlstorage.go:22.95,24.2 1 2
+github.com/ThienKim52/health-check/internal/repository/urlstorage.go:26.79,28.2 1 0

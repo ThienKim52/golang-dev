@@ -68,7 +68,7 @@ func TestGetResponse(t *testing.T) {
 			mockService.On("GetHealthCheck", mock.Anything, tt.serviceName, tt.instanceID).Return(tt.mockResponse, tt.mockError)
 
 			// Create handler
-			handler := NewHealthCheck(mockService)
+			handler := NewHealthCheck(mockService, tt.serviceName, tt.instanceID)
 
 			// Create gin context
 			w := httptest.NewRecorder()
@@ -87,8 +87,9 @@ func TestGetResponse(t *testing.T) {
 	}
 }
 
+// Mock data test heathcheck
 func TestNewHealthCheck(t *testing.T) {
 	mockService := new(MockHealthCheckService)
-	handler := NewHealthCheck(mockService)
+	handler := NewHealthCheck(mockService, "test-service", "123e4567-e89b-12d3-a456-426614174000")
 	assert.NotNil(t, handler)
 }

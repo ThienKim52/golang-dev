@@ -3,7 +3,6 @@ module github.com/ThienKim52/golang-dev
 go 1.25.0
 
 require (
-	github.com/ThienKim52/health-check v0.0.0-20260709031443-6bc0bfe7c7b4
 	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0

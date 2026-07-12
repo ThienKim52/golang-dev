@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 	"time"
+	"errors"
 
 	"github.com/ThienKim52/golang-dev/internal/repository"
 	"github.com/stretchr/testify/assert"
@@ -29,101 +30,91 @@ func TestNewLinkService(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestShortenURL_Success(t *testing.T) {
-	mockRepo := new(repository.MockLinkRepository)
-	mockGenPass := new(MockGenPass)
-	service := NewLinkService(mockRepo, mockGenPass)
-	ctx := context.Background()
+func TestLinkService_ShortenURL(t *testing.T) {
+	tests := []struct {
+		name         string
+		url          string
+		exp          time.Duration
+		setupMocks   func(mockRepo *repository.MockLinkRepository, mockGenPass *MockGenPass)
+		expectedCode string
+		expectedErr  error
+	}{
+		{
+			name: "Success",
+			url:  "https://example.com",
+			exp:  604800 * time.Second,
+			setupMocks: func(mockRepo *repository.MockLinkRepository, mockGenPass *MockGenPass) {
+				ctx := context.Background()
+				mockGenPass.On("GeneratePassword", codeLength).Return("abc1234", nil)
+				mockRepo.On("Exists", ctx, "abc1234").Return(false, nil)
+				mockRepo.On("Save", ctx, "abc1234", "https://example.com", 604800*time.Second).Return(nil)
+			},
+			expectedCode: "abc1234",
+			expectedErr:  nil,
+		},
+		{
+			name: "CodeConflict_RetrySuccess",
+			url:  "https://example.com",
+			exp:  604800 * time.Second,
+			setupMocks: func(mockRepo *repository.MockLinkRepository, mockGenPass *MockGenPass) {
+				ctx := context.Background()
+				mockGenPass.On("GeneratePassword", codeLength).Return("code1", nil).Once()
+				mockRepo.On("Exists", ctx, "code1").Return(true, nil).Once()
+				mockGenPass.On("GeneratePassword", codeLength).Return("code2", nil).Once()
+				mockRepo.On("Exists", ctx, "code2").Return(false, nil).Once()
+				mockRepo.On("Save", ctx, "code2", "https://example.com", 604800*time.Second).Return(nil)
+			},
+			expectedCode: "code2",
+			expectedErr:  nil,
+		},
+		{
+			name: "MaxRetriesExceeded",
+			url:  "https://example.com",
+			exp:  604800 * time.Second,
+			setupMocks: func(mockRepo *repository.MockLinkRepository, mockGenPass *MockGenPass) {
+				ctx := context.Background()
+				mockGenPass.On("GeneratePassword", codeLength).Return("code", nil)
+				mockRepo.On("Exists", ctx, mock.AnythingOfType("string")).Return(true, nil)
+			},
+			expectedCode: "",
+			expectedErr:  ErrMaxRetriesExceeded,
+		},
+		{
+			name: "RepositoryError",
+			url:  "https://example.com",
+			exp:  604800 * time.Second,
+			setupMocks: func(mockRepo *repository.MockLinkRepository, mockGenPass *MockGenPass) {
+				ctx := context.Background()
+				mockGenPass.On("GeneratePassword", codeLength).Return("abc1234", nil)
+				mockRepo.On("Exists", ctx, "abc1234").Return(false, errors.New("repository error"))
+			},
+			expectedCode: "",
+			expectedErr:  errors.New("repository error"),
+		},
+	}
 
-	url := "https://example.com"
-	exp := time.Duration(604800) * time.Second
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(repository.MockLinkRepository)
+			mockGenPass := new(MockGenPass)
+			service := NewLinkService(mockRepo, mockGenPass)
 
-	// Mock genPass to return a code
-	mockGenPass.On("GeneratePassword", codeLength).Return("abc1234", nil)
-	// Mock repository to return false for exists check
-	mockRepo.On("Exists", ctx, "abc1234").Return(false, nil)
-	// Mock repository to save successfully
-	mockRepo.On("Save", ctx, "abc1234", url, exp).Return(nil)
+			tc.setupMocks(mockRepo, mockGenPass)
 
-	code, err := service.ShortenURL(ctx, url, exp)
+			ctx := context.Background()
+			code, err := service.ShortenURL(ctx, tc.url, tc.exp)
 
-	assert.NoError(t, err)
-	assert.NotEmpty(t, code)
-	assert.Equal(t, "abc1234", code)
-	assert.Len(t, code, codeLength)
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+				assert.Empty(t, code)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedCode, code)
+			}
 
-	mockRepo.AssertExpectations(t)
-	mockGenPass.AssertExpectations(t)
+			mockRepo.AssertExpectations(t)
+			mockGenPass.AssertExpectations(t)
+		})
+	}
 }
-
-func TestShortenURL_CodeConflict_RetrySuccess(t *testing.T) {
-	mockRepo := new(repository.MockLinkRepository)
-	mockGenPass := new(MockGenPass)
-	service := NewLinkService(mockRepo, mockGenPass)
-	ctx := context.Background()
-
-	url := "https://example.com"
-	exp := time.Duration(604800) * time.Second
-
-	// First code exists, second code doesn't
-	mockGenPass.On("GeneratePassword", codeLength).Return("code1", nil).Once()
-	mockRepo.On("Exists", ctx, "code1").Return(true, nil).Once()
-	mockGenPass.On("GeneratePassword", codeLength).Return("code2", nil).Once()
-	mockRepo.On("Exists", ctx, "code2").Return(false, nil).Once()
-	mockRepo.On("Save", ctx, "code2", url, exp).Return(nil)
-
-	code, err := service.ShortenURL(ctx, url, exp)
-
-	assert.NoError(t, err)
-	assert.NotEmpty(t, code)
-	assert.Equal(t, "code2", code)
-
-	mockRepo.AssertExpectations(t)
-	mockGenPass.AssertExpectations(t)
-}
-
-func TestShortenURL_MaxRetriesExceeded(t *testing.T) {
-	mockRepo := new(repository.MockLinkRepository)
-	mockGenPass := new(MockGenPass)
-	service := NewLinkService(mockRepo, mockGenPass)
-	ctx := context.Background()
-
-	url := "https://example.com"
-	exp := time.Duration(604800) * time.Second
-
-	// All codes exist
-	mockGenPass.On("GeneratePassword", codeLength).Return("code", nil)
-	mockRepo.On("Exists", ctx, mock.AnythingOfType("string")).Return(true, nil)
-
-	code, err := service.ShortenURL(ctx, url, exp)
-
-	assert.Error(t, err)
-	assert.Empty(t, code)
-	assert.IsType(t, &ErrMaxRetriesExceeded{}, err)
-
-	mockRepo.AssertExpectations(t)
-	mockGenPass.AssertExpectations(t)
-}
-
-func TestShortenURL_RepositoryError(t *testing.T) {
-	mockRepo := new(repository.MockLinkRepository)
-	mockGenPass := new(MockGenPass)
-	service := NewLinkService(mockRepo, mockGenPass)
-	ctx := context.Background()
-
-	url := "https://example.com"
-	exp := time.Duration(604800) * time.Second
-
-	// Mock genPass to return a code
-	mockGenPass.On("GeneratePassword", codeLength).Return("abc1234", nil)
-	// Repository returns error on exists check
-	mockRepo.On("Exists", ctx, "abc1234").Return(false, assert.AnError)
-
-	code, err := service.ShortenURL(ctx, url, exp)
-
-	assert.Error(t, err)
-	assert.Empty(t, code)
-
-	mockRepo.AssertExpectations(t)
-	mockGenPass.AssertExpectations(t)
-}
+	

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	_ "github.com/ThienKim52/golang-dev/docs"
@@ -35,7 +36,7 @@ func NewEngine(config *Config, redisClient *redis.Client) Engine {
 }
 
 func (e *engine) Start() error {
-	return e.app.Run("localhost:8080")
+	return e.app.Run(fmt.Sprintf(":%s", e.config.Port))
 }
 
 func (e *engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -48,21 +49,14 @@ func (e *engine) initRoutes() {
 
 	// Health check endpoint with Redis check
 	healthCheckSvc := service.NewHealthCheck(linkRepo)
-	healthCheckSvcHdl := handler.NewHealthCheck(healthCheckSvc)
-
-	// Middleware to inject service name and instance ID into context
-	middleware := func(c *gin.Context) {
-		c.Set("service_name", e.config.ServiceName)
-		c.Set("instance_id", e.config.InstanceID)
-		c.Next()
-	}
+	healthCheckSvcHdl := handler.NewHealthCheck(healthCheckSvc, e.config.ServiceName, e.config.InstanceID)
 
 	// URL shortening endpoint
 	genPassSvc := service.NewGenPass()
 	linkSvc := service.NewLinkService(linkRepo, genPassSvc)
 	linkHdl := handler.NewLinkHandler(linkSvc)
 	e.app.POST("/v1/links/shorten", linkHdl.ShortenURL)
-	e.app.GET("/health-check", middleware, healthCheckSvcHdl.GetResponse)
+	e.app.GET("/health-check", healthCheckSvcHdl.GetResponse)
 
 	// Swagger documentation route
 	e.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

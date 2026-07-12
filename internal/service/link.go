@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"time"
-
+	"errors"
 	"github.com/ThienKim52/golang-dev/internal/repository"
 )
 
@@ -11,6 +11,8 @@ const (
 	codeLength = 7
 	maxRetries = 10
 )
+
+var ErrMaxRetriesExceeded  = errors.New("max retries exceeded while generating unique code")
 
 // LinkService defines the interface for link operations
 type LinkService interface {
@@ -60,14 +62,6 @@ func (s *linkService) ShortenURL(ctx context.Context, url string, exp time.Durat
 		// Code exists, try again
 	}
 
-	return "", &ErrMaxRetriesExceeded{maxRetries: maxRetries}
+	return "", ErrMaxRetriesExceeded
 }
 
-// ErrMaxRetriesExceeded is returned when max retries for generating unique code is exceeded
-type ErrMaxRetriesExceeded struct {
-	maxRetries int
-}
-
-func (e *ErrMaxRetriesExceeded) Error() string {
-	return "max retries exceeded while generating unique code"
-}

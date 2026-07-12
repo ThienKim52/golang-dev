@@ -14,6 +14,7 @@ type Config struct {
 	RedisDB     int    `envconfig:"REDIS_DB" default:"0"`
 }
 
+// Constructor
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
 	err := envconfig.Process("", cfg)

@@ -15,7 +15,7 @@ import (
 type MockHealthCheckService struct {
 	mock.Mock
 }
-
+// Test healthcheck services
 func (m *MockHealthCheckService) GetHealthCheck(ctx context.Context, serviceName, instanceID string) (string, error) {
 	args := m.Called(ctx, serviceName, instanceID)
 	if args.Get(1) != nil {

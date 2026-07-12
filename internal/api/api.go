@@ -14,6 +14,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// interface Engine
 type Engine interface {
 	Start() error
 	ServeHTTP(w http.ResponseWriter, req *http.Request)
@@ -25,6 +26,7 @@ type engine struct {
 	redisClient *redis.Client
 }
 
+// Constructor
 func NewEngine(config *Config, redisClient *redis.Client) Engine {
 	app := &engine{
 		app:         gin.Default(),
@@ -35,14 +37,17 @@ func NewEngine(config *Config, redisClient *redis.Client) Engine {
 	return app
 }
 
+// Start server
 func (e *engine) Start() error {
 	return e.app.Run(fmt.Sprintf(":%s", e.config.Port))
 }
 
+// ServeHTTP implements http.Handler interface
 func (e *engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	e.app.ServeHTTP(w, req)
 }
 
+// Initialize routes
 func (e *engine) initRoutes() {
 	// Initialize repository with Redis client
 	linkRepo := repository.NewRedisLinkRepository(e.redisClient)

@@ -8,36 +8,45 @@ import (
 
 // HealthCheckService defines the interface for health check operations
 type HealthCheckService interface {
-	GetHealthCheck(ctx context.Context, serviceName, instanceID string) (message string, err error)
+	GetHealthCheck(ctx context.Context) (HealthCheckResult, error)
 }
 
 // healthCheckService implements HealthCheckService
 type healthCheckService struct {
-	repo repository.LinkRepository
+	repo        repository.LinkRepository
+	serviceName string
+	instanceID  string
+}
+
+type HealthCheckResult struct {
+    Message     string `json:"message"`
+    ServiceName string `json:"service_name"`
+    InstanceID  string `json:"instance_id"`
 }
 
 // NewHealthCheck creates a new health check service
-func NewHealthCheck(repo repository.LinkRepository) HealthCheckService {
+func NewHealthCheck(repo repository.LinkRepository, serviceName, instanceID string) HealthCheckService {
 	return &healthCheckService{
 		repo: repo,
-	}
-}
-
-// NewHealthCheckWithoutRedis creates a new health check service without Redis dependency
-func NewHealthCheckWithoutRedis() HealthCheckService {
-	return &healthCheckService{
-		repo: nil,
+		serviceName: serviceName,
+		instanceID:  instanceID,
 	}
 }
 
 // GetHealthCheck returns the health check response
-func (s *healthCheckService) GetHealthCheck(ctx context.Context, serviceName, instanceID string) (string, error) {
+func (s *healthCheckService) GetHealthCheck(ctx context.Context) (HealthCheckResult, error) {
 	// Check Redis connection if repository is available
+	result := HealthCheckResult{
+		Message: "OK",
+		ServiceName: s.serviceName,
+		InstanceID:  s.instanceID,
+	}
+	//if ping repository get error, return error
 	if s.repo != nil {
 		if err := s.repo.Ping(ctx); err != nil {
-			return "", err
+			return HealthCheckResult{}, err
 		}
 	}
 
-	return "OK", nil
+	return result, nil
 }

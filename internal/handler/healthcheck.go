@@ -10,16 +10,12 @@ import (
 // HealthCheckHandler handles health check requests
 type HealthCheckHandler struct {
 	service service.HealthCheckService
-	serviceName string
-	instanceID string
 }
 
 // NewHealthCheck creates a new health check handler
-func NewHealthCheck(service service.HealthCheckService, serviceName, instanceID string) *HealthCheckHandler {
+func NewHealthCheck(service service.HealthCheckService) *HealthCheckHandler {
 	return &HealthCheckHandler{
 		service:     service,
-		serviceName: serviceName,
-		instanceID:  instanceID,
 	}
 }
 
@@ -34,15 +30,11 @@ func NewHealthCheck(service service.HealthCheckService, serviceName, instanceID 
 // @Router /health-check [get]
 func (h *HealthCheckHandler) GetResponse(c *gin.Context) {
 
-	message, err := h.service.GetHealthCheck(c.Request.Context(), h.serviceName, h.instanceID)
+	result, err := h.service.GetHealthCheck(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Redis connection failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":      message,
-		"service_name": h.serviceName,
-		"instance_id":  h.instanceID,
-	})
+	c.JSON(http.StatusOK, result)
 }

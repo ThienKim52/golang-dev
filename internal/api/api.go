@@ -53,8 +53,8 @@ func (e *engine) initRoutes() {
 	linkRepo := repository.NewRedisLinkRepository(e.redisClient)
 
 	// Health check endpoint with Redis check
-	healthCheckSvc := service.NewHealthCheck(linkRepo)
-	healthCheckSvcHdl := handler.NewHealthCheck(healthCheckSvc, e.config.ServiceName, e.config.InstanceID)
+	healthCheckSvc := service.NewHealthCheck(linkRepo, e.config.ServiceName, e.config.InstanceID)
+	healthCheckSvcHdl := handler.NewHealthCheck(healthCheckSvc)
 
 	// URL shortening endpoint
 	genPassSvc := service.NewGenPass()

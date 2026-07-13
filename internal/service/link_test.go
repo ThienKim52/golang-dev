@@ -31,6 +31,8 @@ func TestNewLinkService(t *testing.T) {
 }
 
 func TestLinkService_ShortenURL(t *testing.T) {
+	repoErr := errors.New("repository error")
+
 	tests := []struct {
 		name         string
 		url          string
@@ -86,10 +88,10 @@ func TestLinkService_ShortenURL(t *testing.T) {
 			setupMocks: func(mockRepo *repository.MockLinkRepository, mockGenPass *MockGenPass) {
 				ctx := context.Background()
 				mockGenPass.On("GeneratePassword", codeLength).Return("abc1234", nil)
-				mockRepo.On("Exists", ctx, "abc1234").Return(false, errors.New("repository error"))
+				mockRepo.On("Exists", ctx, "abc1234").Return(false, repoErr)
 			},
 			expectedCode: "",
-			expectedErr:  errors.New("repository error"),
+			expectedErr:  repoErr,
 		},
 	}
 

@@ -8,123 +8,114 @@ import (
 	"testing"
 
 	"github.com/ThienKim52/golang-dev/internal/api"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestHealthCheckIntegration(t *testing.T) {
-	// Set environment variables for testing
-	os.Setenv("SERVICE_NAME", "test-service")
-	os.Setenv("INSTANCE_ID", "test-instance-123")
-	os.Setenv("PORT", "8081")
+func TestHealthCheck(t *testing.T) {
+	// not t.Parallel() because of os.Setenv
 
-	// Create config
-	config, err := api.NewConfig()
-	require.NoError(t, err)
-	assert.Equal(t, "test-service", config.ServiceName)
-	assert.Equal(t, "test-instance-123", config.InstanceID)
+	testCases := []struct {
+		name               string
+		setupEnv           func() // setup env for each case
+		expectedStatusCode int
+		expectedMessage    string
+		verifyResponse     func(t *testing.T, body string) // verify response
+	}{
+		{
+			name: "With Set Env",
+			setupEnv: func() {
+				os.Setenv("SERVICE_NAME", "test-service")
+				os.Setenv("INSTANCE_ID", "test-instance-123")
+				os.Setenv("APP_PORT", "8081")
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedMessage:    "OK",
+			verifyResponse: func(t *testing.T, body string) {
+				var resp map[string]string
+				err := json.Unmarshal([]byte(body), &resp)
+				require.NoError(t, err)
+				assert.Equal(t, "test-service", resp["service_name"])
+				assert.Equal(t, "test-instance-123", resp["instance_id"])
+			},
+		},
+		{
+			name: "With Generated UUID",
+			setupEnv: func() {
+				os.Setenv("SERVICE_NAME", "test-service-uuid")
+				os.Unsetenv("INSTANCE_ID") // unset env to generate UUID
+				os.Setenv("APP_PORT", "8082")
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedMessage:    "OK",
+			verifyResponse: func(t *testing.T, body string) {
+				var resp map[string]string
+				err := json.Unmarshal([]byte(body), &resp)
+				require.NoError(t, err)
+				assert.Equal(t, "test-service-uuid", resp["service_name"])
+				// ensure instance_id has length of UUID (36 characters)
+				assert.Len(t, resp["instance_id"], 36) 
+			},
+		},
+		{
+			name: "With default env",
+			setupEnv: func() {
+				// clear env to check default values
+				os.Unsetenv("SERVICE_NAME")
+				os.Unsetenv("INSTANCE_ID")
+				os.Unsetenv("APP_PORT")
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedMessage:    "OK",
+			verifyResponse: func(t *testing.T, body string) {
+				var resp map[string]string
+				err := json.Unmarshal([]byte(body), &resp)
+				require.NoError(t, err)
+				// default service name is "health-check-service"
+				assert.Equal(t, "health-check-service", resp["service_name"]) 
+				assert.Len(t, resp["instance_id"], 36)
+			},
+		},
+	}
 
-	// Create engine with nil Redis client for testing
-	engine := api.NewEngine(config, nil)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// setup environment
+			tc.setupEnv()
 
-	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		engine.ServeHTTP(w, r)
-	}))
-	defer server.Close()
+			// create config (NewConfig will read from env)
+			cfg, err := api.NewConfig()
+			require.NoError(t, err)
 
-	// Make request
-	resp, err := http.Get(server.URL + "/health-check")
-	require.NoError(t, err)
-	defer resp.Body.Close()
+			// create virtual database miniredis
+			mr, err := miniredis.Run()
+			require.NoError(t, err)
+			defer mr.Close()
 
-	// Assert response
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+			// create client connected to miniredis
+			redisClient := redis.NewClient(&redis.Options{
+				Addr: mr.Addr(),
+			})
+			defer redisClient.Close()
 
-	var response map[string]string
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	require.NoError(t, err)
+			// create engine application
+			apiEngine := api.NewEngine(cfg, redisClient)
 
-	assert.Equal(t, "OK", response["message"])
-	assert.Equal(t, "test-service", response["service_name"])
-	assert.Equal(t, "test-instance-123", response["instance_id"])
-}
+			// simulate HTTP request to endpoint /health-check
+			req := httptest.NewRequest("GET", "/health-check", nil)
+			respRec := httptest.NewRecorder()
+			apiEngine.ServeHTTP(respRec, req)
 
-func TestHealthCheckIntegrationWithGeneratedUUID(t *testing.T) {
-	// Set environment variables without INSTANCE_ID to test UUID generation
-	os.Setenv("SERVICE_NAME", "test-service-uuid")
-	os.Unsetenv("INSTANCE_ID")
-	os.Setenv("PORT", "8082")
-
-	// Create config
-	config, err := api.NewConfig()
-	require.NoError(t, err)
-	assert.Equal(t, "test-service-uuid", config.ServiceName)
-	assert.NotEmpty(t, config.InstanceID)
-	// Verify it's a valid UUID format (basic check)
-	assert.Len(t, config.InstanceID, 36)
-
-	// Create engine with nil Redis client for testing
-	engine := api.NewEngine(config, nil)
-
-	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		engine.ServeHTTP(w, r)
-	}))
-	defer server.Close()
-
-	// Make request
-	resp, err := http.Get(server.URL + "/health-check")
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	// Assert response
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var response map[string]string
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	require.NoError(t, err)
-
-	assert.Equal(t, "OK", response["message"])
-	assert.Equal(t, "test-service-uuid", response["service_name"])
-	assert.Equal(t, config.InstanceID, response["instance_id"])
-}
-
-func TestHealthCheckIntegrationDefaultValues(t *testing.T) {
-	// Unset all environment variables to test defaults
-	os.Unsetenv("SERVICE_NAME")
-	os.Unsetenv("INSTANCE_ID")
-	os.Unsetenv("PORT")
-
-	// Create config
-	config, err := api.NewConfig()
-	require.NoError(t, err)
-	assert.Equal(t, "health-check-service", config.ServiceName)
-	assert.NotEmpty(t, config.InstanceID)
-	assert.Equal(t, "8080", config.Port)
-
-	// Create engine with nil Redis client for testing
-	engine := api.NewEngine(config, nil)
-
-	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		engine.ServeHTTP(w, r)
-	}))
-	defer server.Close()
-
-	// Make request
-	resp, err := http.Get(server.URL + "/health-check")
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	// Assert response
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var response map[string]string
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	require.NoError(t, err)
-
-	assert.Equal(t, "OK", response["message"])
-	assert.Equal(t, "health-check-service", response["service_name"])
-	assert.Equal(t, config.InstanceID, response["instance_id"])
+			// assert response
+			assert.Equal(t, tc.expectedStatusCode, respRec.Code)
+			assert.Contains(t, respRec.Body.String(), tc.expectedMessage)
+			
+			// verify response JSON
+			if tc.verifyResponse != nil {
+				tc.verifyResponse(t, respRec.Body.String())
+			}
+		})
+	}
 }

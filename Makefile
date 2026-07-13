@@ -26,9 +26,11 @@ run:
 test-all:
 	go test ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
+
 test:
 	@echo "Running all tests..."
 	@go test -v -race -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
 
 
 ## test-unit: Run unit tests only

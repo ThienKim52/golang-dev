@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ThienKim52/golang-dev/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -16,12 +17,9 @@ type MockHealthCheckService struct {
 	mock.Mock
 }
 // Test healthcheck services
-func (m *MockHealthCheckService) GetHealthCheck(ctx context.Context, serviceName, instanceID string) (string, error) {
-	args := m.Called(ctx, serviceName, instanceID)
-	if args.Get(1) != nil {
-		return "", args.Error(1)
-	}
-	return args.Get(0).(string), nil
+func (m *MockHealthCheckService) GetHealthCheck(ctx context.Context) (service.HealthCheckResult, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(service.HealthCheckResult), args.Error(1)
 }
 
 func TestGetResponse(t *testing.T) {
@@ -65,17 +63,20 @@ func TestGetResponse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock service
 			mockService := new(MockHealthCheckService)
-			mockService.On("GetHealthCheck", mock.Anything, tt.serviceName, tt.instanceID).Return(tt.mockResponse, tt.mockError)
+			result := service.HealthCheckResult{
+				Message: tt.mockResponse,
+				ServiceName: tt.serviceName,
+				InstanceID:  tt.instanceID,
+			}
+			mockService.On("GetHealthCheck", mock.Anything).Return(result, tt.mockError)
 
 			// Create handler
-			handler := NewHealthCheck(mockService, tt.serviceName, tt.instanceID)
+			handler := NewHealthCheck(mockService)
 
 			// Create gin context
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			c.Request = httptest.NewRequest("GET", "/health-check", nil)
-			c.Set("service_name", tt.serviceName)
-			c.Set("instance_id", tt.instanceID)
 
 			// Call handler
 			handler.GetResponse(c)
@@ -85,11 +86,4 @@ func TestGetResponse(t *testing.T) {
 			mockService.AssertExpectations(t)
 		})
 	}
-}
-
-// Mock data test heathcheck
-func TestNewHealthCheck(t *testing.T) {
-	mockService := new(MockHealthCheckService)
-	handler := NewHealthCheck(mockService, "test-service", "123e4567-e89b-12d3-a456-426614174000")
-	assert.NotNil(t, handler)
 }

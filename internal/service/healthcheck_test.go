@@ -48,38 +48,21 @@ func TestGetHealthCheck(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(repository.MockLinkRepository)
-			service := NewHealthCheck(mockRepo)
+			service := NewHealthCheck(mockRepo, tt.serviceName, tt.instanceID)
 			mockRepo.On("Ping", ctx).Return(tt.mockPingErr)
 
-			result, err := service.GetHealthCheck(ctx, tt.serviceName, tt.instanceID)
+			result, err := service.GetHealthCheck(ctx)
 
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
+				assert.Equal(t, tt.expected, result.Message)
+				assert.Equal(t, tt.serviceName, result.ServiceName)
+				assert.Equal(t, tt.instanceID, result.InstanceID)
 			}
 
 			mockRepo.AssertExpectations(t)
 		})
 	}
-}
-
-func TestNewHealthCheck(t *testing.T) {
-	mockRepo := new(repository.MockLinkRepository)
-	service := NewHealthCheck(mockRepo)
-	assert.NotNil(t, service)
-	_, ok := service.(*healthCheckService)
-	assert.True(t, ok)
-}
-
-func TestNewHealthCheckWithoutRedis(t *testing.T) {
-	service := NewHealthCheckWithoutRedis()
-	assert.NotNil(t, service)
-
-	ctx := context.Background()
-	result, err := service.GetHealthCheck(ctx, "test-service", "test-id")
-
-	assert.NoError(t, err)
-	assert.Equal(t, "OK", result)
 }

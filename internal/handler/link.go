@@ -13,17 +13,20 @@ type LinkHandler interface {
 }
 
 // LinkHandler handles link-related requests
-type linkHandler struct {
+type shortenURL struct {
 	service service.LinkService
 }
 
 // NewLinkHandler creates a new link handler
-func NewLinkHandler(service service.LinkService) *linkHandler {
-	return &linkHandler{
+func NewLinkHandler(service service.LinkService) *shortenURL {
+	return &shortenURL{
 		service: service,
 	}
 }
-
+type req struct {
+	URL string `json:"url" binding:"required"`
+	Exp time.Duration  `json:"exp" binding:"required"`
+}
 // ShortenURL handles POST /v1/links/shorten
 // @Summary Shorten a URL
 // @Description Creates a short code for a given URL
@@ -36,24 +39,22 @@ func NewLinkHandler(service service.LinkService) *linkHandler {
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /v1/links/shorten [post]
-func (h *linkHandler) ShortenURL(c *gin.Context) {
-	var req struct {
-		URL string `json:"url" binding:"required"`
-		Exp int64  `json:"exp" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (h *shortenURL) ShortenURL(c *gin.Context) {
+	req := &req{}
+
+	if err := c.ShouldBindJSON(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	code, err := h.service.ShortenURL(c.Request.Context(), req.URL, time.Duration(req.Exp)*time.Second)
+	code, err := h.service.ShortenURL(c, req.URL, req.Exp)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to shorten URL"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
 		"message": "Shorten URL generated successfully!",
+		"code":    code,
 	})
 }

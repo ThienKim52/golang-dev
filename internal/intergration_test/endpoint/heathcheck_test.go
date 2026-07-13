@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9" 
 	"github.com/ThienKim52/golang-dev/internal/api"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenPass(t *testing.T) {
+func TestHealthCheck (t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -19,7 +19,7 @@ func TestGenPass(t *testing.T) {
 		setupTestHTTP func(api api.Engine) *httptest.ResponseRecorder
 
 		expectedStatusCode      int
-		expectedResponseContain string
+		expectedMessage string
 	}{
 		{
 			name: "Get response successfully",
@@ -31,7 +31,7 @@ func TestGenPass(t *testing.T) {
 				return respRec
 			},
 			expectedStatusCode:      http.StatusOK,
-			expectedResponseContain: `{"password":`,
+			expectedMessage: "OK",
 		},
 		{
 			name: "Wrong response",
@@ -49,16 +49,21 @@ func TestGenPass(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			redisClient := redis.NewClient(&redis.Options{})
+			s, err := miniredis.Run()
+			assert.NoError(t, err)
+			defer s.Close() 
+			
+			redisClient := redis.NewClient(&redis.Options{
+				Addr: s.Addr(),
+			})
+			defer redisClient.Close()
+
 			apiEngine := api.NewEngine(&api.Config{}, redisClient)
 
 			rec := tc.setupTestHTTP(apiEngine)
 
 			assert.Equal(t, tc.expectedStatusCode, rec.Code)
-			if len(tc.expectedResponseContain) > 0 {
-				assert.Equal(t, len(rec.Body.String()), len(tc.expectedResponseContain)+12+3)
-			}
-			assert.Contains(t, rec.Body.String(), tc.expectedResponseContain)
+			assert.Contains(t, rec.Body.String(), tc.expectedMessage)
 		})
 	}
 

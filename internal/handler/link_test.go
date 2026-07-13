@@ -25,88 +25,67 @@ func (m *MockLinkService) ShortenURL(ctx context.Context, url string, exp time.D
 	}
 	return args.Get(0).(string), nil
 }
-
-func TestNewLinkHandler(t *testing.T) {
-	mockService := new(MockLinkService)
-	handler := NewLinkHandler(mockService)
-	assert.NotNil(t, handler)
-}
-
-func TestShortenURL_Success(t *testing.T) {
+func TestShortenURL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockService := new(MockLinkService)
-	handler := NewLinkHandler(mockService)
+	testCases := []struct {
+		name               string
+		reqBody            string
+		setupMock          func(m *MockLinkService)         // callback mock case
+		expectedStatusCode int
+	}{
+		{
+			name:    "Success",
+			reqBody: `{"url": "https://example.com", "exp": 604800}`,
+			setupMock: func(m *MockLinkService) {
+				m.On("ShortenURL", mock.Anything, "https://example.com", time.Duration(604800)).
+					Return("abc1234", nil)
+			},
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Invalid JSON",
+			reqBody:            `{"url": "invalid json`,
+			setupMock:          func(m *MockLinkService) {},
+			expectedStatusCode: http.StatusBadRequest,
+		},
+		{
+			name:               "Missing Fields",
+			reqBody:            `{"url": "https://example.com"}`, 
+			setupMock:          func(m *MockLinkService) {}, 
+			expectedStatusCode: http.StatusBadRequest,
+		},
+		{
+			name:    "Service Error",
+			reqBody: `{"url": "https://example.com", "exp": 604800}`,
+			setupMock: func(m *MockLinkService) {
+				m.On("ShortenURL", mock.Anything, "https://example.com", time.Duration(604800)).
+					Return("", assert.AnError)
+			},
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+	}
 
-	reqBody := `{"url": "https://example.com", "exp": 604800}`
-	expectedCode := "abc1234"
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// init mock service for each case
+			mockService := new(MockLinkService)
+			tc.setupMock(mockService)
 
-	mockService.On("ShortenURL", mock.Anything, "https://example.com", time.Duration(604800)*time.Second).Return(expectedCode, nil)
+			handler := NewLinkHandler(mockService)
 
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/v1/links/shorten", bytes.NewBufferString(reqBody))
-	c.Request.Header.Set("Content-Type", "application/json")
+			// init mock request
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest("POST", "/v1/links/shorten", bytes.NewBufferString(tc.reqBody))
+			c.Request.Header.Set("Content-Type", "application/json")
 
-	handler.ShortenURL(c)
+			// call Handler
+			handler.ShortenURL(c)
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	mockService.AssertExpectations(t)
-}
-
-func TestShortenURL_InvalidJSON(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	mockService := new(MockLinkService)
-	handler := NewLinkHandler(mockService)
-
-	reqBody := `{"url": "invalid json`
-
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/v1/links/shorten", bytes.NewBufferString(reqBody))
-	c.Request.Header.Set("Content-Type", "application/json")
-
-	handler.ShortenURL(c)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestShortenURL_MissingFields(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	mockService := new(MockLinkService)
-	handler := NewLinkHandler(mockService)
-
-	reqBody := `{"url": "https://example.com"}` // Missing exp field
-
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/v1/links/shorten", bytes.NewBufferString(reqBody))
-	c.Request.Header.Set("Content-Type", "application/json")
-
-	handler.ShortenURL(c)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestShortenURL_ServiceError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	mockService := new(MockLinkService)
-	handler := NewLinkHandler(mockService)
-
-	reqBody := `{"url": "https://example.com", "exp": 604800}`
-
-	mockService.On("ShortenURL", mock.Anything, "https://example.com", time.Duration(604800)*time.Second).Return("", assert.AnError)
-
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/v1/links/shorten", bytes.NewBufferString(reqBody))
-	c.Request.Header.Set("Content-Type", "application/json")
-
-	handler.ShortenURL(c)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	mockService.AssertExpectations(t)
+			// check
+			assert.Equal(t, tc.expectedStatusCode, w.Code)
+			mockService.AssertExpectations(t)
+		})
+	}
 }

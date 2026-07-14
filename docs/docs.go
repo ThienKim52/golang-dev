@@ -15,10 +15,6 @@ const docTemplate = `{
             "url": "http://www.swagger.io/support",
             "email": "support@swagger.io"
         },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -59,6 +55,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/links/redirect/{code}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "links"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shorten code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Found"
+                    }
+                }
+            }
+        },
         "/v1/links/shorten": {
             "post": {
                 "description": "Creates a short code for a given URL",
@@ -74,21 +97,12 @@ const docTemplate = `{
                 "summary": "Shorten a URL",
                 "parameters": [
                     {
-                        "description": "URL to shorten",
-                        "name": "url",
+                        "description": "Request body",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Expiration time in seconds",
-                        "name": "exp",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
+                            "$ref": "#/definitions/handler.ShortenInputBody"
                         }
                     }
                 ],
@@ -123,14 +137,31 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "definitions": {
+        "handler.ShortenInputBody": {
+            "type": "object",
+            "required": [
+                "exp",
+                "url"
+            ],
+            "properties": {
+                "exp": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
-	BasePath:         "/",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{"http"},
 	Title:            "Health Check API",
 	Description:      "This is a health check API server.",

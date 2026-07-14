@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
-	"errors"
 
 	"github.com/ThienKim52/golang-dev/internal/repository"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +49,7 @@ func TestLinkService_ShortenURL(t *testing.T) {
 				ctx := context.Background()
 				mockGenPass.On("GeneratePassword", codeLength).Return("abc1234", nil)
 				mockRepo.On("Exists", ctx, "abc1234").Return(false, nil)
-				mockRepo.On("Save", ctx, "abc1234", "https://example.com", 604800*time.Second).Return(nil)
+				mockRepo.On("StoreURL", ctx, "abc1234", "https://example.com", 604800*time.Second).Return(nil)
 			},
 			expectedCode: "abc1234",
 			expectedErr:  nil,
@@ -64,7 +64,7 @@ func TestLinkService_ShortenURL(t *testing.T) {
 				mockRepo.On("Exists", ctx, "code1").Return(true, nil).Once()
 				mockGenPass.On("GeneratePassword", codeLength).Return("code2", nil).Once()
 				mockRepo.On("Exists", ctx, "code2").Return(false, nil).Once()
-				mockRepo.On("Save", ctx, "code2", "https://example.com", 604800*time.Second).Return(nil)
+				mockRepo.On("StoreURL", ctx, "code2", "https://example.com", 604800*time.Second).Return(nil)
 			},
 			expectedCode: "code2",
 			expectedErr:  nil,
@@ -119,4 +119,3 @@ func TestLinkService_ShortenURL(t *testing.T) {
 		})
 	}
 }
-	

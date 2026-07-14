@@ -3,110 +3,93 @@ package repository
 import (
 	"context"
 	"testing"
+	"time"
 
-	"github.com/alicebob/miniredis/v2"
+	redis2 "github.com/ThienKim52/golang-dev/pkg/redis"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewRedisLinkRepository(t *testing.T) {
-	s, err := miniredis.Run()
-	assert.NoError(t, err)
-	defer s.Close()
+func setupMockRedis(t *testing.T) *redis.Client {
+			mock := redis2.InitMockRedis(t)
+			return mock
+		}
 
-	client := redis.NewClient(&redis.Options{
-		Addr: s.Addr(),
-	})
-	defer client.Close()
+func TestRedisLinkRepository(t *testing.T) {
+	t.Parallel()
+	testcases := []struct {
+		name        string
+		expectedErr error
+		verifyFunc  func(ctx context.Context, repo *LinkRepository, r *redis.Client)
+	}{
+		{
+			name: "new Redis LinkRepository",
+			expectedErr: nil,
+			verifyFunc: func(ctx context.Context, repo *LinkRepository, r *redis.Client) {
+				assert.NotNil(t, repo)
+				_, ok := (*repo).(*RedisLinkRepository)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "func StoreURL",
+			verifyFunc: func(ctx context.Context, repo *LinkRepository, r *redis.Client) {
+				err := (*repo).StoreURL(ctx, "test", "http://google.com", 0)
+				assert.NoError(t, err)
+				val := r.Get(ctx, "test")
+				assert.NotNil(t, val)
+				assert.Equal(t, "http://google.com", val.Val())
+			},
+			expectedErr: redis.ErrClosed,
+		},
+		{
+			name: "func GetURL",
+			verifyFunc: func(ctx context.Context, repo *LinkRepository, r *redis.Client) {
+				r.Set(ctx, "test", "http://google.com", time.Hour)
+				val, err := (*repo).GetURL(ctx, "test")
+				assert.NoError(t, err)
+				assert.Equal(t, "http://google.com", val)
 
-	repo := NewRedisLinkRepository(client)
-	assert.NotNil(t, repo)
-	_, ok := repo.(*RedisLinkRepository)
-	assert.True(t, ok)
-}
+				val, err = (*repo).GetURL(ctx, "non-existent")
+				assert.ErrorIs(t, err, redis.Nil)
+				assert.Empty(t, val)
+			},
+			expectedErr: redis.ErrClosed,
+		},
+		{
+			name: "func Exists",
+			verifyFunc: func(ctx context.Context, repo *LinkRepository, r *redis.Client) {
+				exists, err := (*repo).Exists(ctx, "test")
+				assert.NoError(t, err)
+				assert.False(t, exists)
 
-func TestRedisLinkRepository_Save(t *testing.T) {
-	s, err := miniredis.Run()
-	assert.NoError(t, err)
-	defer s.Close()
+				r.Set(ctx, "test", "http://google.com", time.Hour)
 
-	client := redis.NewClient(&redis.Options{
-		Addr: s.Addr(),
-	})
-	defer client.Close()
+				exists, err = (*repo).Exists(ctx, "test")
+				assert.NoError(t, err)
+				assert.True(t, exists)
+			},
+			expectedErr: redis.ErrClosed,
+		},
+		{
+			name: "func Ping",
+			verifyFunc: func(ctx context.Context, repo *LinkRepository, r *redis.Client){
+				err := (*repo).Ping(ctx)
+				assert.NoError(t, err)
+			},
+			expectedErr: redis.ErrClosed,
+		},
+	}
 
-	repo := NewRedisLinkRepository(client)
-	ctx := context.Background()
-
-	err = repo.Save(ctx, "test", "http://google.com", 0)
-	assert.NoError(t, err)
-
-	val, err := s.Get("test")
-	assert.NoError(t, err)
-	assert.Equal(t, "http://google.com", val)
-}
-
-func TestRedisLinkRepository_GetByCode(t *testing.T) {
-	s, err := miniredis.Run()
-	assert.NoError(t, err)
-	defer s.Close()
-
-	client := redis.NewClient(&redis.Options{
-		Addr: s.Addr(),
-	})
-	defer client.Close()
-
-	repo := NewRedisLinkRepository(client)
-	ctx := context.Background()
-
-	s.Set("test", "http://google.com")
-
-	val, err := repo.GetByCode(ctx, "test")
-	assert.NoError(t, err)
-	assert.Equal(t, "http://google.com", val)
-
-	val, err = repo.GetByCode(ctx, "non-existent")
-	assert.ErrorIs(t, err, redis.Nil)
-	assert.Empty(t, val)
-}
-
-func TestRedisLinkRepository_Exists(t *testing.T) {
-	s, err := miniredis.Run()
-	assert.NoError(t, err)
-	defer s.Close()
-
-	client := redis.NewClient(&redis.Options{
-		Addr: s.Addr(),
-	})
-	defer client.Close()
-
-	repo := NewRedisLinkRepository(client)
-	ctx := context.Background()
-
-	exists, err := repo.Exists(ctx, "test")
-	assert.NoError(t, err)
-	assert.False(t, exists)
-
-	s.Set("test", "http://google.com")
-
-	exists, err = repo.Exists(ctx, "test")
-	assert.NoError(t, err)
-	assert.True(t, exists)
-}
-
-func TestRedisLinkRepository_Ping(t *testing.T) {
-	s, err := miniredis.Run()
-	assert.NoError(t, err)
-	defer s.Close()
-
-	client := redis.NewClient(&redis.Options{
-		Addr: s.Addr(),
-	})
-	defer client.Close()
-
-	repo := NewRedisLinkRepository(client)
-	ctx := context.Background()
-
-	err = repo.Ping(ctx)
-	assert.NoError(t, err)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			mock := setupMockRedis(t)
+			repo := NewRedisLinkRepository(mock)
+			if tc.verifyFunc != nil {
+				tc.verifyFunc(ctx, &repo, mock)
+			}
+		})
+	}
 }

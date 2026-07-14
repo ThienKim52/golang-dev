@@ -12,10 +12,8 @@ import (
 func TestUrlStorage_StoreURL(t *testing.T) {
 	t.Parallel()
 	testcases := []struct {
-		name string
-
-		setupMock func(ctx context.Context, t *testing.T) *redis.Client
-
+		name        string
+		setupMock   func(ctx context.Context, t *testing.T) *redis.Client
 		expectedErr error
 		verifyFunc  func(ctx context.Context, r *redis.Client)
 	}{

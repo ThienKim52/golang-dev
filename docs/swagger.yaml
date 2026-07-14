@@ -1,14 +1,20 @@
-basePath: /
-host: localhost:8080
+definitions:
+  handler.ShortenInputBody:
+    properties:
+      exp:
+        type: integer
+      url:
+        type: string
+    required:
+    - exp
+    - url
+    type: object
 info:
   contact:
     email: support@swagger.io
     name: API Support
     url: http://www.swagger.io/support
   description: This is a health check API server.
-  license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
   title: Health Check API
   version: "1.0"
@@ -36,24 +42,35 @@ paths:
       summary: Health check endpoint
       tags:
       - health
+  /v1/links/redirect/{code}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Shorten code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+      tags:
+      - links
   /v1/links/shorten:
     post:
       consumes:
       - application/json
       description: Creates a short code for a given URL
       parameters:
-      - description: URL to shorten
+      - description: Request body
         in: body
-        name: url
+        name: request
         required: true
         schema:
-          type: string
-      - description: Expiration time in seconds
-        in: body
-        name: exp
-        required: true
-        schema:
-          type: integer
+          $ref: '#/definitions/handler.ShortenInputBody'
       produces:
       - application/json
       responses:

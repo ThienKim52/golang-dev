@@ -1,15 +1,18 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
+	"github.com/ThienKim52/golang-dev/internal/repository"
 	"github.com/ThienKim52/golang-dev/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type LinkHandler interface {
 	ShortenURL(c *gin.Context)
+	Redirect(c *gin.Context)
 }
 
 // LinkHandler handles link-related requests
@@ -23,31 +26,32 @@ func NewLinkHandler(service service.LinkService) *shortenURL {
 		service: service,
 	}
 }
-type req struct {
+
+type ShortenInputBody struct {
 	URL string `json:"url" binding:"required"`
-	Exp time.Duration  `json:"exp" binding:"required"`
+	Exp *int64 `json:"exp" binding:"required"`
 }
+
 // ShortenURL handles POST /v1/links/shorten
 // @Summary Shorten a URL
 // @Description Creates a short code for a given URL
 // @Tags links
 // @Accept json
 // @Produce json
-// @Param url body string true "URL to shorten"
-// @Param exp body int true "Expiration time in seconds"
+// @Param request body handler.ShortenInputBody true "Request body"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /v1/links/shorten [post]
 func (h *shortenURL) ShortenURL(c *gin.Context) {
-	req := &req{}
+	req := &ShortenInputBody{}
 
 	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	code, err := h.service.ShortenURL(c, req.URL, req.Exp)
+	code, err := h.service.ShortenURL(c, req.URL, time.Duration(*req.Exp)*time.Second)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to shorten URL"})
 		return
@@ -57,4 +61,31 @@ func (h *shortenURL) ShortenURL(c *gin.Context) {
 		"message": "Shorten URL generated successfully!",
 		"code":    code,
 	})
+}
+
+// Redirect Forward the request to the original url
+
+// @Tags links
+// @Accept application/json
+// @Produce application/json
+// @Param code path string true "Shorten code"
+// @Success 302
+// @Router /v1/links/redirect/{code} [get]
+func (s *shortenURL) Redirect(c *gin.Context) {
+	code := c.Param("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+	}
+
+	url, err := s.service.GetLinkFromCode(c, code)
+	if err != nil {
+		if errors.Is(err, repository.ErrCodeNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Code not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+	c.Redirect(http.StatusFound, url)
+
 }

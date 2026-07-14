@@ -9,8 +9,8 @@ import (
 
 // LinkRepository defines the interface for link storage operations
 type LinkRepository interface {
-	Save(ctx context.Context, code, url string, exp time.Duration) error
-	GetByCode(ctx context.Context, code string) (string, error)
+	StoreURL(ctx context.Context, code, url string, exp time.Duration) error
+	GetURL(ctx context.Context, code string) (string, error)
 	Exists(ctx context.Context, code string) (bool, error)
 	Ping(ctx context.Context) error
 }
@@ -26,12 +26,12 @@ func NewRedisLinkRepository(c *redis.Client) LinkRepository {
 }
 
 // Save saves a link to Redis with expiration
-func (r *RedisLinkRepository) Save(ctx context.Context, code, url string, exp time.Duration) error {
+func (r *RedisLinkRepository) StoreURL(ctx context.Context, code, url string, exp time.Duration) error {
 	return r.c.Set(ctx, code, url, exp).Err()
 }
 
-// GetByCode retrieves a link by its code
-func (r *RedisLinkRepository) GetByCode(ctx context.Context, code string) (string, error) {
+// Get retrieves a link by its code
+func (r *RedisLinkRepository) GetURL(ctx context.Context, code string) (string, error) {
 	return r.c.Get(ctx, code).Result()
 }
 

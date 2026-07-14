@@ -8,7 +8,7 @@ BINARY_NAME=$(BUILD_DIR)/$(APP_NAME)
 GO_FILES=$(shell find . -name '*.go' -not -path './vendor/*' -not -path './build/*')
 
 # Default target
-all: build
+all: swagger run
 
 ## build: Build the application
 build:

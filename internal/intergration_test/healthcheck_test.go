@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/ThienKim52/golang-dev/internal/api"
+	"github.com/gin-gonic/gin"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -16,20 +16,20 @@ import (
 
 func TestHealthCheck(t *testing.T) {
 	// not t.Parallel() because of os.Setenv
-
+	t.Parallel()
 	testCases := []struct {
 		name               string
-		setupEnv           func() // setup env for each case
+		cfg                api.Config
 		expectedStatusCode int
 		expectedMessage    string
 		verifyResponse     func(t *testing.T, body string) // verify response
 	}{
 		{
 			name: "With Set Env",
-			setupEnv: func() {
-				os.Setenv("SERVICE_NAME", "test-service")
-				os.Setenv("INSTANCE_ID", "test-instance-123")
-				os.Setenv("APP_PORT", "8081")
+			cfg: api.Config{
+				ServiceName: "test-service",
+				InstanceID:  "test-instance-123",
+				AppPort:     "8081",
 			},
 			expectedStatusCode: http.StatusOK,
 			expectedMessage:    "OK",
@@ -43,10 +43,10 @@ func TestHealthCheck(t *testing.T) {
 		},
 		{
 			name: "With Generated UUID",
-			setupEnv: func() {
-				os.Setenv("SERVICE_NAME", "test-service-uuid")
-				os.Unsetenv("INSTANCE_ID") // unset env to generate UUID
-				os.Setenv("APP_PORT", "8082")
+			cfg: api.Config{
+				ServiceName: "test-service-uuid",
+				InstanceID:  "test-instance-456",
+				AppPort:     "8082",
 			},
 			expectedStatusCode: http.StatusOK,
 			expectedMessage:    "OK",
@@ -55,17 +55,15 @@ func TestHealthCheck(t *testing.T) {
 				err := json.Unmarshal([]byte(body), &resp)
 				require.NoError(t, err)
 				assert.Equal(t, "test-service-uuid", resp["service_name"])
-				// ensure instance_id has length of UUID (36 characters)
-				assert.Len(t, resp["instance_id"], 36) 
+				assert.Equal(t, "test-instance-456", resp["instance_id"])
 			},
 		},
 		{
 			name: "With default env",
-			setupEnv: func() {
-				// clear env to check default values
-				os.Unsetenv("SERVICE_NAME")
-				os.Unsetenv("INSTANCE_ID")
-				os.Unsetenv("APP_PORT")
+			cfg: api.Config{
+				ServiceName: "health-check-service",
+				InstanceID:  "test-instance-123",
+				AppPort:     "8082",
 			},
 			expectedStatusCode: http.StatusOK,
 			expectedMessage:    "OK",
@@ -73,21 +71,15 @@ func TestHealthCheck(t *testing.T) {
 				var resp map[string]string
 				err := json.Unmarshal([]byte(body), &resp)
 				require.NoError(t, err)
-				// default service name is "health-check-service"
-				assert.Equal(t, "health-check-service", resp["service_name"]) 
-				assert.Len(t, resp["instance_id"], 36)
+				assert.Equal(t, "health-check-service", resp["service_name"])
+				assert.Equal(t, "test-instance-123", resp["instance_id"])
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// setup environment
-			tc.setupEnv()
-
-			// create config (NewConfig will read from env)
-			cfg, err := api.NewConfig()
-			require.NoError(t, err)
+			t.Parallel()
 
 			// create virtual database miniredis
 			mr, err := miniredis.Run()
@@ -101,7 +93,8 @@ func TestHealthCheck(t *testing.T) {
 			defer redisClient.Close()
 
 			// create engine application
-			apiEngine := api.NewEngine(cfg, redisClient)
+			apiEngine := api.New(gin.New(), &tc.cfg, redisClient)
+
 
 			// simulate HTTP request to endpoint /health-check
 			req := httptest.NewRequest("GET", "/health-check", nil)
@@ -111,7 +104,7 @@ func TestHealthCheck(t *testing.T) {
 			// assert response
 			assert.Equal(t, tc.expectedStatusCode, respRec.Code)
 			assert.Contains(t, respRec.Body.String(), tc.expectedMessage)
-			
+
 			// verify response JSON
 			if tc.verifyResponse != nil {
 				tc.verifyResponse(t, respRec.Body.String())

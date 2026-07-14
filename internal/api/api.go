@@ -37,9 +37,19 @@ func NewEngine(config *Config, redisClient *redis.Client) Engine {
 	return app
 }
 
+func New(gin *gin.Engine, config *Config, redisClient *redis.Client) Engine {
+	app := &engine{
+		app:         gin,
+		config:      config,
+		redisClient: redisClient,
+	}
+	app.initRoutes()
+	return app
+}
+
 // Start server
 func (e *engine) Start() error {
-	return e.app.Run(fmt.Sprintf(":%s", e.config.Port))
+	return e.app.Run(fmt.Sprintf(":%s", e.config.AppPort))
 }
 
 // ServeHTTP implements http.Handler interface
@@ -55,14 +65,17 @@ func (e *engine) initRoutes() {
 	// Health check endpoint with Redis check
 	healthCheckSvc := service.NewHealthCheck(linkRepo, e.config.ServiceName, e.config.InstanceID)
 	healthCheckSvcHdl := handler.NewHealthCheck(healthCheckSvc)
-
-	// URL shortening endpoint
+	e.app.GET("/health-check", healthCheckSvcHdl.GetResponse)
+	// Genpass endpoint
 	genPassSvc := service.NewGenPass()
+	genPassHdl := handler.NewGenPass(genPassSvc)
+	e.app.GET("/genpass", genPassHdl.GeneratePassword)
+	// URL shortening endpoint
 	linkSvc := service.NewLinkService(linkRepo, genPassSvc)
 	linkHdl := handler.NewLinkHandler(linkSvc)
 	e.app.POST("/v1/links/shorten", linkHdl.ShortenURL)
-	e.app.GET("/health-check", healthCheckSvcHdl.GetResponse)
-
+	e.app.GET("/v1/links/redirect/:code", linkHdl.Redirect)
+	
 	// Swagger documentation route
 	e.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }

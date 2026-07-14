@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"time"
 	"errors"
 	"github.com/ThienKim52/golang-dev/internal/repository"
+	"time"
 )
 
 const (
@@ -12,23 +12,24 @@ const (
 	maxRetries = 10
 )
 
-var ErrMaxRetriesExceeded  = errors.New("max retries exceeded while generating unique code")
+var ErrMaxRetriesExceeded = errors.New("max retries exceeded while generating unique code")
 
-// LinkService defines the interface for link operations
+//go:generate mockery --name=LinkService --filename=linkservice.go --outpkg=mocks_genpass
 type LinkService interface {
 	ShortenURL(ctx context.Context, url string, exp time.Duration) (code string, err error)
+	GetLinkFromCode(ctx context.Context, code string) (string, error)
 }
 
 // linkService implements LinkService
 type linkService struct {
-	repo    repository.LinkRepository
+	storage repository.LinkRepository
 	genPass GenPass
 }
 
 // NewLinkService creates a new link service
-func NewLinkService(repo repository.LinkRepository, genPass GenPass) LinkService {
+func NewLinkService(storage repository.LinkRepository, genPass GenPass) LinkService {
 	return &linkService{
-		repo:    repo,
+		storage: storage,
 		genPass: genPass,
 	}
 }
@@ -46,14 +47,14 @@ func (s *linkService) ShortenURL(ctx context.Context, url string, exp time.Durat
 		}
 
 		// Check if code already exists
-		exists, err := s.repo.Exists(ctx, code)
+		exists, err := s.storage.Exists(ctx, code)
 		if err != nil {
 			return "", err
 		}
 
 		if !exists {
 			// Code is unique, save the link
-			if err := s.repo.Save(ctx, code, url, exp); err != nil {
+			if err := s.storage.StoreURL(ctx, code, url, exp); err != nil {
 				return "", err
 			}
 
@@ -65,3 +66,6 @@ func (s *linkService) ShortenURL(ctx context.Context, url string, exp time.Durat
 	return "", ErrMaxRetriesExceeded
 }
 
+func (s *linkService) GetLinkFromCode(ctx context.Context, code string) (string, error) {
+	return s.storage.GetURL(ctx, code)
+}

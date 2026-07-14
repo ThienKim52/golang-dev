@@ -6,7 +6,7 @@ import (
 	"github.com/ThienKim52/golang-dev/internal/repository"
 )
 
-// HealthCheckService defines the interface for health check operations
+//go:generate mockery --name=HealthCheckService --filename=healthcheckservice.go --outpkg=mocks_genpass
 type HealthCheckService interface {
 	GetHealthCheck(ctx context.Context) (HealthCheckResult, error)
 }
@@ -19,15 +19,15 @@ type healthCheckService struct {
 }
 
 type HealthCheckResult struct {
-    Message     string `json:"message"`
-    ServiceName string `json:"service_name"`
-    InstanceID  string `json:"instance_id"`
+	Message     string `json:"message"`
+	ServiceName string `json:"service_name"`
+	InstanceID  string `json:"instance_id"`
 }
 
 // NewHealthCheck creates a new health check service
 func NewHealthCheck(repo repository.LinkRepository, serviceName, instanceID string) HealthCheckService {
 	return &healthCheckService{
-		repo: repo,
+		repo:        repo,
 		serviceName: serviceName,
 		instanceID:  instanceID,
 	}
@@ -37,7 +37,7 @@ func NewHealthCheck(repo repository.LinkRepository, serviceName, instanceID stri
 func (s *healthCheckService) GetHealthCheck(ctx context.Context) (HealthCheckResult, error) {
 	// Check Redis connection if repository is available
 	result := HealthCheckResult{
-		Message: "OK",
+		Message:     "OK",
 		ServiceName: s.serviceName,
 		InstanceID:  s.instanceID,
 	}

@@ -9,7 +9,7 @@ import (
 type Config struct {
 	ServiceName string `envconfig:"SERVICE_NAME" default:"health-check-service"`
 	InstanceID  string `envconfig:"INSTANCE_ID" default:""`
-	Port        string `envconfig:"APP_PORT" default:"8080"`
+	AppPort     string `envconfig:"APP_PORT" default:"8080"`
 	RedisAddr   string `envconfig:"REDIS_ADDR" default:"localhost:6379"`
 	RedisDB     int    `envconfig:"REDIS_DB" default:"0"`
 }

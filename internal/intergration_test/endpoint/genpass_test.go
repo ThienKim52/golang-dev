@@ -4,13 +4,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
 	"github.com/alicebob/miniredis/v2"
-	"github.com/redis/go-redis/v9" 
-	"github.com/ThienKim52/golang-dev/internal/api"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/ThienKim52/golang-dev/internal/api"
 )
 
-func TestHealthCheck (t *testing.T) {
+
+func TestGenPass(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -19,25 +23,25 @@ func TestHealthCheck (t *testing.T) {
 		setupTestHTTP func(api api.Engine) *httptest.ResponseRecorder
 
 		expectedStatusCode      int
-		expectedMessage string
+		expectedResponseContain string
 	}{
 		{
-			name: "Get response successfully",
+			name: "Generate password successfully",
 
 			setupTestHTTP: func(api api.Engine) *httptest.ResponseRecorder {
-				req := httptest.NewRequest("GET", "/health-check", nil)
+				req := httptest.NewRequest("GET", "/genpass", nil)
 				respRec := httptest.NewRecorder()
 				api.ServeHTTP(respRec, req)
 				return respRec
 			},
 			expectedStatusCode:      http.StatusOK,
-			expectedMessage: "OK",
+			expectedResponseContain: `{"password":`,
 		},
 		{
-			name: "Wrong response",
+			name: "Wrong endpoint",
 
 			setupTestHTTP: func(api api.Engine) *httptest.ResponseRecorder {
-				req := httptest.NewRequest("POST", "/heath-check", nil)
+				req := httptest.NewRequest("GET", "/genpass2", nil)
 				respRec := httptest.NewRecorder()
 				api.ServeHTTP(respRec, req)
 				return respRec
@@ -49,21 +53,31 @@ func TestHealthCheck (t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			s, err := miniredis.Run()
-			assert.NoError(t, err)
-			defer s.Close() 
-			
+
+			cfg, err := api.NewConfig()
+			require.NoError(t, err)
+
+			// create virtual database miniredis
+			mr, err := miniredis.Run()
+			require.NoError(t, err)
+			defer mr.Close()
+
+			// create client connected to miniredis
 			redisClient := redis.NewClient(&redis.Options{
-				Addr: s.Addr(),
+				Addr: mr.Addr(),
 			})
 			defer redisClient.Close()
 
-			apiEngine := api.NewEngine(&api.Config{}, redisClient)
+			// create engine application
+			apiEngine := api.NewEngine(cfg, redisClient)
 
 			rec := tc.setupTestHTTP(apiEngine)
 
 			assert.Equal(t, tc.expectedStatusCode, rec.Code)
-			assert.Contains(t, rec.Body.String(), tc.expectedMessage)
+			if len(tc.expectedResponseContain) > 0 {
+				assert.Equal(t, len(rec.Body.String()), len(tc.expectedResponseContain)+12+3)
+			}
+			assert.Contains(t, rec.Body.String(), tc.expectedResponseContain)
 		})
 	}
 

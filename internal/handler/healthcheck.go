@@ -15,7 +15,7 @@ type HealthCheckHandler struct {
 // NewHealthCheck creates a new health check handler
 func NewHealthCheck(service service.HealthCheckService) *HealthCheckHandler {
 	return &HealthCheckHandler{
-		service:     service,
+		service: service,
 	}
 }
 

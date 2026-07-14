@@ -14,15 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestShortenURL(t *testing.T) {
 	testCases := []struct {
-		name               string
+		name                 string
 		expectedResponseBody string
-		reqBody string
+		reqBody              string
 
 		setupTestHTTP func(api api.Engine) *httptest.ResponseRecorder
-		setupRedis func(ctx context.Context) *redis.Client
+		setupRedis    func(ctx context.Context) *redis.Client
 
 		expectedStatusCode int
 	}{
@@ -38,9 +37,8 @@ func TestShortenURL(t *testing.T) {
 				mock := redisPkg.InitMockRedis(t)
 				return mock
 			},
-			expectedStatusCode: http.StatusOK,
+			expectedStatusCode:   http.StatusOK,
 			expectedResponseBody: "Shorten URL generated successfully",
-			
 		},
 		{
 			name: "failed case",
@@ -55,26 +53,25 @@ func TestShortenURL(t *testing.T) {
 				_ = mock.Close()
 				return mock
 			},
-			expectedStatusCode: http.StatusInternalServerError,
+			expectedStatusCode:   http.StatusInternalServerError,
 			expectedResponseBody: `{"error":"Failed to shorten URL"}`,
-			
 		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
-		ctx := context.Background()
+			t.Parallel()
+			ctx := context.Background()
 
-		// generate test redis
-		mockRedis := tc.setupRedis(ctx)
+			// generate test redis
+			mockRedis := tc.setupRedis(ctx)
 
-		// Initialize the Gin router
-		apiEngine := api.NewEngine(&api.Config{}, mockRedis)
-		rec := tc.setupTestHTTP(apiEngine)
-		assert.Equal(t, tc.expectedStatusCode, rec.Code)
-		assert.Contains(t, rec.Body.String(), tc.expectedResponseBody)
+			// Initialize the Gin router
+			apiEngine := api.NewEngine(&api.Config{}, mockRedis)
+			rec := tc.setupTestHTTP(apiEngine)
+			assert.Equal(t, tc.expectedStatusCode, rec.Code)
+			assert.Contains(t, rec.Body.String(), tc.expectedResponseBody)
 		})
 	}
 }

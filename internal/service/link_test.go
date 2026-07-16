@@ -119,3 +119,57 @@ func TestLinkService_ShortenURL(t *testing.T) {
 		})
 	}
 }
+
+func TestLinkService_GetLinkFromCode(t *testing.T) {
+	tests := []struct {
+		name         string
+		code         string
+		setupMocks   func(mockRepo *repository.MockLinkRepository)
+		expectedLink string
+		expectedErr  error
+	}{
+		{
+			name: "Success",
+			code: "abc1234",
+			setupMocks: func(mockRepo *repository.MockLinkRepository) {
+				ctx := context.Background()
+				mockRepo.On("GetURL", ctx, "abc1234").Return("https://example.com", nil)
+			},
+			expectedLink: "https://example.com",
+			expectedErr:  nil,
+		},
+		{
+			name: "CodeNotFound",
+			code: "abc1234",
+			setupMocks: func(mockRepo *repository.MockLinkRepository) {
+				ctx := context.Background()
+				mockRepo.On("GetURL", ctx, "abc1234").Return("", repository.ErrCodeNotFound)
+			},
+			expectedLink: "",
+			expectedErr:  repository.ErrCodeNotFound,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(repository.MockLinkRepository)
+			mockGenPass := new(MockGenPass)
+			service := NewLinkService(mockRepo, mockGenPass)
+
+			tc.setupMocks(mockRepo)
+
+			ctx := context.Background()
+			link, err := service.GetLinkFromCode(ctx, tc.code)
+
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+				assert.Empty(t, link)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedLink, link)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}

@@ -6,9 +6,9 @@ import (
 
 // Config struct for app config
 type config struct {
-	Address  string `default:"Localhost:6379" envconfig:"address"`
-	Password string `default:"" envconfig:"password"`
-	DB       int    `default:"0" envconfig:"db"`
+	Address  string `default:"Localhost:6379" envconfig:"ADDRESS"`
+	Password string `default:"" envconfig:"PASSWORD"`
+	DB       int    `default:"0" envconfig:"DB"`
 }
 
 func newConfig(envPrefix string) (*config, error) {

@@ -8,6 +8,7 @@ import (
 	"github.com/ThienKim52/golang-dev/internal/repository"
 	"github.com/ThienKim52/golang-dev/internal/service"
 	"github.com/gin-gonic/gin"
+	log "github.com/rs/zerolog/log"
 )
 
 type LinkHandler interface {
@@ -28,8 +29,8 @@ func NewLinkHandler(service service.LinkService) *shortenURL {
 }
 
 type ShortenInputBody struct {
-	URL string `json:"url" binding:"required"`
-	Exp *int64 `json:"exp" binding:"required"`
+	URL string `json:"url" binding:"required,url"`
+	Exp *int64 `json:"exp" binding:"required,gte=50000"`
 }
 
 // ShortenURL handles POST /v1/links/shorten
@@ -53,6 +54,7 @@ func (h *shortenURL) ShortenURL(c *gin.Context) {
 
 	code, err := h.service.ShortenURL(c, req.URL, time.Duration(*req.Exp)*time.Second)
 	if err != nil {
+		log.Error().Err(err).Str("from", "handler.shortenURL.ShortenURL").Msg("Failed to shorten URL")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to shorten URL"})
 		return
 	}
@@ -83,6 +85,7 @@ func (s *shortenURL) Redirect(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Code not found"})
 			return
 		}
+		log.Error().Err(err).Str("from", "handler.LinkHandler.Redirect").Msg("Can't get url from code")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}

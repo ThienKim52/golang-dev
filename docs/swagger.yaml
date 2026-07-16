@@ -2,6 +2,7 @@ definitions:
   handler.ShortenInputBody:
     properties:
       exp:
+        minimum: 50000
         type: integer
       url:
         type: string

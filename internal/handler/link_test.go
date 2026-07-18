@@ -10,7 +10,6 @@ import (
 	mocks_linkservice "github.com/ThienKim52/golang-dev/internal/service/mocks"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestShortenURL(t *testing.T) {
@@ -85,7 +84,6 @@ func TestShortenURL(t *testing.T) {
 
 			// check
 			assert.Equal(t, tc.expectedStatusCode, w.Code)
-			mockService.AssertExpectations(t)
 		})
 	}
 }
@@ -95,49 +93,37 @@ func TestRedirect(t *testing.T) {
 
 	testCases := []struct {
 		name               string
-		reqBody string
-		setupMock          func() *mocks_linkservice.LinkService // callback mock case
+		setupMock          func(c *gin.Context)  *mocks_linkservice.LinkService // callback mock case
 		setupTestRequest func(c *gin.Context)
 		expectedStatusCode int
-		expectedResponse string
+		expectedURL string
 	}{
 		{
 			name:    "Success",
-			reqBody: `{"url": "https://example.com", "exp": 604800}`,
-			setupMock: func() *mocks_linkservice.LinkService {
+			setupMock: func(c *gin.Context)  *mocks_linkservice.LinkService {
 				mockSvc := mocks_linkservice.NewLinkService(t)
-				mockSvc.On("ShortenURL", mock.Anything, "https://example.com", time.Duration(604800)*time.Second).
-					Return("abc1234", nil)
+				mockSvc.On("GetLinkFromCode", c, "123456").
+					Return("https://example.com", nil)
 				return mockSvc
 			},
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			name:    "Invalid JSON",
-			reqBody: `{"url": "invalid json`,
-			setupMock: func() *mocks_linkservice.LinkService {
-				mockSvc := mocks_linkservice.NewLinkService(t)
-				return mockSvc
+			setupTestRequest: func(c *gin.Context) {
+				c.Request = httptest.NewRequest(http.MethodGet,  "/v1/links/redirect/123456", nil)
+				c.Params = gin.Params{{Key: "code", Value: "123456"}}
 			},
-			expectedStatusCode: http.StatusBadRequest,
-		},
-		{
-			name:    "Missing Fields",
-			reqBody: `{"url": "https://example.com"}`,
-			setupMock: func() *mocks_linkservice.LinkService {
-				mockSvc := mocks_linkservice.NewLinkService(t)
-				return mockSvc
-			},
-			expectedStatusCode: http.StatusBadRequest,
+			expectedStatusCode: http.StatusFound,
+			expectedURL: "https://example.com",
 		},
 		{
 			name:    "Service Error",
-			reqBody: `{"url": "https://example.com", "exp": 604800}`,
-			setupMock: func() *mocks_linkservice.LinkService {
+			setupMock: func(c *gin.Context)  *mocks_linkservice.LinkService {
 				mockSvc := mocks_linkservice.NewLinkService(t)
-				mockSvc.On("ShortenURL", mock.Anything, "https://example.com", time.Duration(604800)*time.Second).
+				mockSvc.On("GetLinkFromCode", c, "123456").
 					Return("", assert.AnError)
 				return mockSvc
+			},
+			setupTestRequest: func(c *gin.Context) {
+				c.Request = httptest.NewRequest(http.MethodGet,  "/v1/links/redirect/123456", nil)
+				c.Params = gin.Params{{Key: "code", Value: "123456"}}
 			},
 			expectedStatusCode: http.StatusInternalServerError,
 		},
@@ -150,17 +136,18 @@ func TestRedirect(t *testing.T) {
 			// init mock request
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Request = httptest.NewRequest("POST", "/v1/links/shorten", bytes.NewBufferString(tc.reqBody))
-			c.Request.Header.Set("Content-Type", "application/json")
-			mockService := tc.setupMock()
+			mockService := tc.setupMock(c)
+			tc.setupTestRequest(c)
 			handler := NewLinkHandler(mockService)
 
 			// call Handler
-			handler.ShortenURL(c)
+			handler.Redirect(c)
 
 			// check
 			assert.Equal(t, tc.expectedStatusCode, w.Code)
-			mockService.AssertExpectations(t)
+			if tc.expectedStatusCode == http.StatusFound {
+				assert.Equal(t, tc.expectedURL, w.Header().Get("Location"))
+			}
 		})
 	}
 }

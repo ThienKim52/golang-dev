@@ -5,6 +5,7 @@ import (
 
 	"github.com/ThienKim52/golang-dev/internal/service"
 	"github.com/gin-gonic/gin"
+	log "github.com/rs/zerolog/log"
 )
 
 // HealthCheckHandler handles health check requests
@@ -32,6 +33,7 @@ func (h *HealthCheckHandler) GetResponse(c *gin.Context) {
 
 	result, err := h.service.GetHealthCheck(c)
 	if err != nil {
+		log.Error().Err(err).Str("from", "handler.HealthCheckHandler.GetResponse").Msg("Failed to get response")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
 		return
 	}

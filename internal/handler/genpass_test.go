@@ -54,7 +54,7 @@ func TestGenPass_GeneratePassword(t *testing.T) {
 			},
 
 			expectedStatusCode: http.StatusInternalServerError,
-			expectedResponse:   `{"error":"Internal server error"}`,
+			expectedResponse:   `{"message":"Processing error"}`,
 		},
 	}
 

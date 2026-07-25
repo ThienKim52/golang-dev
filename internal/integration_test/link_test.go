@@ -53,7 +53,7 @@ func TestShortenURL(t *testing.T) {
 				return mock
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
-			expectedResponseBody: `{"error":"Failed to shorten URL"}`,
+			expectedResponseBody: `{"message":"Processing error"}`,
 		},
 	}
 
@@ -120,7 +120,7 @@ func TestRedirect(t *testing.T) {
 				return mock
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
-			expectedResponseBody: `{"error":"Internal server error"}`,
+			expectedResponseBody: `{"message":"Processing error"}`,
 		},
 	}
 

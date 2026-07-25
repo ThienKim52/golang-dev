@@ -1,4 +1,4 @@
-.PHONY: all build run test test-unit test-integration clean swagger fmt lint deps help
+.PHONY: all build run test test-unit test-integration clean swagger fmt lint deps help docker-build docker-run docker-compose-up
 
 # Variables
 APP_NAME=health-check
@@ -41,7 +41,7 @@ test-unit:
 ## test-integration: Run integration tests only
 test-integration:
 	@echo "Running integration tests..."
-	@go test -v ./internal/intergration_test/...
+	@go test -v ./internal/integration_test/...
 
 ## clean: Clean build artifacts
 clean:
@@ -81,12 +81,12 @@ deps-verify:
 ## docker-build: Build Docker image
 docker-build:
 	@echo "Building Docker image..."
-	@docker build -t $(APP_NAME):latest .
+	@docker build -t bookmark-service:dev .
 
 ## docker-run: Run Docker container
 docker-run:
 	@echo "Running Docker container..."
-	@docker run -p 8080:8080 $(APP_NAME):latest
+	@docker run --rm -p 8080:8080 bookmark-service:dev
 
 ## help: Show this help message
 help:
@@ -106,3 +106,6 @@ test-cover:
 	fi
 
 
+
+docker-compose-up:
+	docker compose up --build

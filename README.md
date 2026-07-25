@@ -227,6 +227,18 @@ go tool cover -html=coverage.out
 | `make test` | Run all tests |
 | `make test-integration` | Run integration tests only |
 | `make swagger` | Generate Swagger documentation |
+## Deployment
+
+This application supports containerized deployment using Docker Compose. For more detailed instructions on building images, routing, and scaling services, please see the [Deployment & Infrastructure Guide](file:///d:/CODE/Golang/golang-dev/deployment/README.md).
+
+### VM Deployment
+
+The application is deployed on a production VM with the IP address `103.75.183.118`. You can access and verify the live environment via:
+
+* **Frontend UI**: [http://103.75.183.118/](http://103.75.183.118/)
+* **Health Check Endpoint**: [http://103.75.183.118/api/bookmark_service/health-check](http://103.75.183.118/api/bookmark_service/health-check)
+* **Swagger API Documentation**: [http://103.75.183.118/api/bookmark_service/swagger/index.html](http://103.75.183.118/api/bookmark_service/swagger/index.html)
+* **Swagger Health Check Detail**: [http://103.75.183.118/api/bookmark_service/swagger/index.html#/health-check/get_health_check](http://103.75.183.118/api/bookmark_service/swagger/index.html#/health-check/get_health_check)
 
 
 ## Development

@@ -1,19 +1,12 @@
 {
-    "schemes": [
-        "http"
-    ],
     "swagger": "2.0",
     "info": {
         "description": "This is a health check API server.",
         "title": "Health Check API",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
+        "contact": {},
         "version": "1.0"
     },
+    "basePath": "/",
     "paths": {
         "/health-check": {
             "get": {
@@ -143,7 +136,7 @@
             "properties": {
                 "exp": {
                     "type": "integer",
-                    "minimum": 50000
+                    "minimum": 300
                 },
                 "url": {
                     "type": "string"

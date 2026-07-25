@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	_ "github.com/ThienKim52/golang-dev/docs"
+	"github.com/ThienKim52/golang-dev/docs"
 	"github.com/ThienKim52/golang-dev/internal/handler"
 	"github.com/ThienKim52/golang-dev/internal/repository"
 	"github.com/ThienKim52/golang-dev/internal/service"
@@ -57,25 +57,48 @@ func (e *engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	e.app.ServeHTTP(w, req)
 }
 
-// Initialize routes
-func (e *engine) initRoutes() {
-	// Initialize repository with Redis client
+func (e *engine) initHandlers() *allHandlers{
 	linkRepo := repository.NewRedisLinkRepository(e.redisClient)
 
 	// Health check endpoint with Redis check
 	healthCheckSvc := service.NewHealthCheck(linkRepo, e.config.ServiceName, e.config.InstanceID)
 	healthCheckSvcHdl := handler.NewHealthCheck(healthCheckSvc)
-	e.app.GET("/health-check", healthCheckSvcHdl.GetResponse)
 	// Genpass endpoint
 	genPassSvc := service.NewGenPass()
 	genPassHdl := handler.NewGenPass(genPassSvc)
-	e.app.GET("/genpass", genPassHdl.GeneratePassword)
 	// URL shortening endpoint
 	linkSvc := service.NewLinkService(linkRepo, genPassSvc)
 	linkHdl := handler.NewLinkHandler(linkSvc)
-	e.app.POST("/v1/links/shorten", linkHdl.ShortenURL)
-	e.app.GET("/v1/links/redirect/:code", linkHdl.Redirect)
-	
+
+	return &allHandlers{
+		healthCheckSvcHdl: healthCheckSvcHdl,
+		genPassHdl:        genPassHdl,
+		linkHdl:           linkHdl,
+	}
+}
+
+type allHandlers struct {
+	healthCheckSvcHdl handler.HealthCheckHandler
+	genPassHdl        handler.GenPass
+	linkHdl           handler.LinkHandler
+}
+
+// Initialize routes
+func (e *engine) initRoutes() {
+	// Initialize repository with Redis client
+	allHandlers := e.initHandlers()
+	docs.SwaggerInfo.BasePath = e.config.BasePath
+	e.app.GET("/health-check", allHandlers.healthCheckSvcHdl.GetResponse)
+
+	e.app.GET("/genpass", allHandlers.genPassHdl.GeneratePassword)
+
+	v1Routes := e.app.Group("/v1")
+	{
+		// Link-related
+		v1Routes.POST("/links/shorten", allHandlers.linkHdl.ShortenURL)
+		v1Routes.GET("/links/redirect/:code", allHandlers.linkHdl.Redirect)
+	}
+
 	// Swagger documentation route
 	e.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }

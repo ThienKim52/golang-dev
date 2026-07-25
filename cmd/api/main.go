@@ -10,12 +10,7 @@ import (
 // @title Health Check API
 // @version 1.0
 // @description This is a health check API server.
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
-// @schemes http
+// @Basepath /
 func main() {
 	config, err := api.NewConfig()
 	

@@ -5,17 +5,21 @@ import (
 
 	"github.com/ThienKim52/golang-dev/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/ThienKim52/golang-dev/response"
 	log "github.com/rs/zerolog/log"
 )
 
+type HealthCheckHandler interface{
+	GetResponse(c *gin.Context)
+}
 // HealthCheckHandler handles health check requests
-type HealthCheckHandler struct {
+type healthCheckHandler struct {
 	service service.HealthCheckService
 }
 
 // NewHealthCheck creates a new health check handler
-func NewHealthCheck(service service.HealthCheckService) *HealthCheckHandler {
-	return &HealthCheckHandler{
+func NewHealthCheck(service service.HealthCheckService) HealthCheckHandler {
+	return &healthCheckHandler{
 		service: service,
 	}
 }
@@ -29,12 +33,12 @@ func NewHealthCheck(service service.HealthCheckService) *HealthCheckHandler {
 // @Success 200 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /health-check [get]
-func (h *HealthCheckHandler) GetResponse(c *gin.Context) {
+func (h *healthCheckHandler) GetResponse(c *gin.Context) {
 
 	result, err := h.service.GetHealthCheck(c)
 	if err != nil {
-		log.Error().Err(err).Str("from", "handler.HealthCheckHandler.GetResponse").Msg("Failed to get response")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		log.Error().Err(err).Str("from", "handler.healthCheckHandler.GetResponse").Msg("Failed to get response")
+		c.JSON(http.StatusInternalServerError, response.InternalErrResponse)
 		return
 	}
 

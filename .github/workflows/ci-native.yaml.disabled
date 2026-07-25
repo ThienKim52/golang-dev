@@ -21,10 +21,10 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: run unit test
+      - name: Run unit test
         run: make test
 
-      - name: login to docker
+      - name: Log in to Docker
         uses: docker/login-action@v4
         with:
           username :

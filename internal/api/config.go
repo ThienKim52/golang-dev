@@ -13,6 +13,7 @@ type Config struct {
 	RedisAddr   string `envconfig:"REDIS_ADDR" default:"localhost:6379"`
 	RedisDB     int    `envconfig:"REDIS_DB" default:"0"`
 	LogLevel 	string `envconfig:"LOG_LEVEL" default:"info"`
+	BasePath	string `envconfig:"BASE_PATH" default:"/"`
 }
 
 // Constructor

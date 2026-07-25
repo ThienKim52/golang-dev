@@ -1,8 +1,9 @@
+basePath: /
 definitions:
   handler.ShortenInputBody:
     properties:
       exp:
-        minimum: 50000
+        minimum: 300
         type: integer
       url:
         type: string
@@ -11,12 +12,8 @@ definitions:
     - url
     type: object
 info:
-  contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
+  contact: {}
   description: This is a health check API server.
-  termsOfService: http://swagger.io/terms/
   title: Health Check API
   version: "1.0"
 paths:
@@ -96,6 +93,4 @@ paths:
       summary: Shorten a URL
       tags:
       - links
-schemes:
-- http
 swagger: "2.0"

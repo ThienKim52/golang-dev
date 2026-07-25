@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ThienKim52/golang-dev/internal/service"
+	"github.com/ThienKim52/golang-dev/response"
 	log "github.com/rs/zerolog/log"
 )
 
@@ -31,7 +32,7 @@ func (g *genPass) GeneratePassword(c *gin.Context) {
 	pass, err := g.svc.GeneratePassword(passwordLength)
 	if err != nil {
 		log.Error().Err(err).Str("from", "handler.genPass.GeneratePassword").Msg("Failed to generate password")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		c.JSON(http.StatusInternalServerError, response.InternalErrResponse)
 		return
 	}
 

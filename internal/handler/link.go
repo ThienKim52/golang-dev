@@ -7,6 +7,7 @@ import (
 
 	"github.com/ThienKim52/golang-dev/internal/repository"
 	"github.com/ThienKim52/golang-dev/internal/service"
+	"github.com/ThienKim52/golang-dev/response"
 	"github.com/gin-gonic/gin"
 	log "github.com/rs/zerolog/log"
 )
@@ -30,7 +31,7 @@ func NewLinkHandler(service service.LinkService) *shortenURL {
 
 type ShortenInputBody struct {
 	URL string `json:"url" binding:"required,url"`
-	Exp *int64 `json:"exp" binding:"required,gte=50000"`
+	Exp *int64 `json:"exp" binding:"required,gte=300"`
 }
 
 // ShortenURL handles POST /v1/links/shorten
@@ -48,14 +49,14 @@ func (h *shortenURL) ShortenURL(c *gin.Context) {
 	req := &ShortenInputBody{}
 
 	if err := c.ShouldBindJSON(req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, response.InputFieldError(err))
 		return
 	}
 
 	code, err := h.service.ShortenURL(c, req.URL, time.Duration(*req.Exp)*time.Second)
 	if err != nil {
 		log.Error().Err(err).Str("from", "handler.shortenURL.ShortenURL").Msg("Failed to shorten URL")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to shorten URL"})
+		c.JSON(http.StatusInternalServerError, response.InternalErrResponse)
 		return
 	}
 
@@ -76,17 +77,17 @@ func (h *shortenURL) ShortenURL(c *gin.Context) {
 func (s *shortenURL) Redirect(c *gin.Context) {
 	code := c.Param("code")
 	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		c.JSON(http.StatusBadRequest, response.InputErrResponse)
 	}
 
 	url, err := s.service.GetLinkFromCode(c, code)
 	if err != nil {
 		if errors.Is(err, repository.ErrCodeNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Code not found"})
+			c.JSON(http.StatusNotFound, response.InternalErrResponse)
 			return
 		}
 		log.Error().Err(err).Str("from", "handler.LinkHandler.Redirect").Msg("Can't get url from code")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		c.JSON(http.StatusInternalServerError, response.InternalErrResponse)
 		return
 	}
 	c.Redirect(http.StatusFound, url)

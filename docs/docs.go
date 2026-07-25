@@ -9,12 +9,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -148,7 +143,7 @@ const docTemplate = `{
             "properties": {
                 "exp": {
                     "type": "integer",
-                    "minimum": 50000
+                    "minimum": 300
                 },
                 "url": {
                     "type": "string"
@@ -162,8 +157,8 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "",
-	BasePath:         "",
-	Schemes:          []string{"http"},
+	BasePath:         "/",
+	Schemes:          []string{},
 	Title:            "Health Check API",
 	Description:      "This is a health check API server.",
 	InfoInstanceName: "swagger",

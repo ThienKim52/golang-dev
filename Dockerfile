@@ -6,7 +6,7 @@ COPY . .
 FROM base AS build
 RUN apk add build-base
 RUN go mod download && \
-GOOS=linux go build -tags musl -ldflags "-w -s" -o bookmark_service cmd/api/main.go
+GOOS=linux go build -tags musl -ldflags "-w -s" -o bookmark-service cmd/api/main.go
 
 FROM base AS test-exec
 ARG _outputdir="/tmp/coverage"

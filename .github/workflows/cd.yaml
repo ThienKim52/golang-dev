@@ -22,6 +22,6 @@ jobs:
           docker rm -f bookmark-service
           docker-compose pull bookmark-service
           docker-compose up -d bookmark-service
-          docker system prune -f
+          docker system prune -f  
 
           

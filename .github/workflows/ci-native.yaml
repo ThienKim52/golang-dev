@@ -37,5 +37,5 @@ jobs:
         with:
           push: true
           tags: |
-            kimthanthien/bookmark:${{ github.ref_name }}
+            kimthanthien/bookmark:v1.0.0
             kimthanthien/bookmark:latest

@@ -16,7 +16,6 @@ jobs:
         run: |
           echo "Deploying application ... "
           git pull
-          export IMAGE_TAG=${{ github.event.workflow_run.head_branch }}
           docker rm -f bookmark-service || true
           docker-compose pull bookmark_service
           docker-compose up -d bookmark_service

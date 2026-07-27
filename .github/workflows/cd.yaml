@@ -4,7 +4,7 @@ on:
     workflows: ["ci-pipeline"]
     types:
     - completed
-
+# update ex-5 as default
 jobs:
   cd_pipeline:
     if: >

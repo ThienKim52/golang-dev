@@ -32,12 +32,12 @@ run:
 
 ## test: Run all tests
 test-all:
-	go test ./... -coverprofile=coverage.out
+	go test ./... -coverprofile="coverage.out"
 	go tool cover -html=coverage.out -o coverage.html
 
 test:
 	@echo "Running all tests..."
-	@go test -v -race -coverprofile=coverage.out ./...
+	@go test -v -race -coverprofile="coverage.out" ./...
 	go tool cover -html=coverage.out -o coverage.html
 
 
@@ -94,7 +94,7 @@ help:
 COVERAGE_EXCLUDE=mocks|main.go|docs|test|config.go
 COVERAGE_THRESHOLD = 50
 test-cover:
-	go test ./... -coverprofile=coverage.tmp -covermode=atomic -coverpkg=./... -p 1
+	go test ./... -coverprofile="coverage.tmp" -covermode=atomic -coverpkg=./... -p 1
 	grep -vE "$(COVERAGE_EXCLUDE)" coverage.tmp > coverage.out
 	go tool cover -html=coverage.out -o coverage.html
 	@total=$$(go tool cover -func=coverage.out | grep total: | awk '{print $$3}' | sed 's/%//'); \

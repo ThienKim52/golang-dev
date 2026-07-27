@@ -18,7 +18,6 @@ jobs:
         run: |
           echo "Deploying application ... "
           git pull
-          cd ./deployment
           docker rm -f bookmark-service
           docker-compose pull bookmark-service
           docker-compose up -d bookmark-service

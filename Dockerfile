@@ -2,11 +2,11 @@ FROM golang:1.26-alpine AS base
 RUN mkdir -p /opt/app
 WORKDIR /opt/app
 COPY . .
+RUN go mod download
 
 FROM base AS build
 RUN apk add build-base
-RUN go mod download && \
-GOOS=linux go build -tags musl -ldflags "-w -s" -o bookmark-service cmd/api/main.go
+RUN GOOS=linux go build -tags musl -ldflags "-w -s" -o bookmark-service cmd/api/main.go
 
 FROM base AS test-exec
 ARG _outputdir="/tmp/coverage"

@@ -39,3 +39,4 @@ jobs:
           tags: |
             kimthanthien/bookmark:v1.0.0
             kimthanthien/bookmark:latest
+            

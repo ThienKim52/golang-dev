@@ -1,5 +1,5 @@
 name: ci-pipeline
-on:
+on: 
 
   pull_request:
     branches: [ "main", "feature/ex-5" ]

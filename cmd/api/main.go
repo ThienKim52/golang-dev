@@ -8,7 +8,7 @@ import (
 )
 
 // @title Health Check API
-// @version 1.1
+// @version 1.0
 // @description This is a health check API server.
 // @Basepath /
 func main() {

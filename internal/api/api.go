@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/ThienKim52/golang-dev/docs"
 	"github.com/ThienKim52/golang-dev/internal/handler"
@@ -14,8 +13,6 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
-
-var swaggerOnce sync.Once
 
 // interface Engine
 type Engine interface {
@@ -90,9 +87,7 @@ type allHandlers struct {
 func (e *engine) initRoutes() {
 	// Initialize repository with Redis client
 	allHandlers := e.initHandlers()
-	swaggerOnce.Do(func() {
-		docs.SwaggerInfo.BasePath = e.config.BasePath
-	})
+	docs.SwaggerInfo.BasePath = e.config.BasePath
 	e.app.GET("/health-check", allHandlers.healthCheckSvcHdl.GetResponse)
 
 	e.app.GET("/genpass", allHandlers.genPassHdl.GeneratePassword)

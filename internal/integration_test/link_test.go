@@ -53,10 +53,40 @@ func TestShortenURL(t *testing.T) {
 				return mock
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
-			expectedResponseBody: `{"message":"Processing error"}`,
+			expectedResponseBody: `{"error":"Failed to shorten URL"}`,
 		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+
+			// generate test redis
+			mockRedis := tc.setupRedis(ctx)
+
+			// Initialize the Gin router
+			apiEngine := api.NewEngine(&api.Config{}, mockRedis)
+			rec := tc.setupTestHTTP(apiEngine)
+			assert.Equal(t, tc.expectedStatusCode, rec.Code)
+			assert.Contains(t, rec.Body.String(), tc.expectedResponseBody)
+		})
+	}
+}
+
+func TestRedirect(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		expectedResponseBody string
+
+		setupTestHTTP func(api api.Engine) *httptest.ResponseRecorder
+		setupRedis    func(ctx context.Context) *redis.Client
+
+		expectedStatusCode int
+	}{
 		{
-			name: "normal case redirect",
+			name: "normal case",
 			//setup request
 			setupTestHTTP: func(api api.Engine) *httptest.ResponseRecorder {
 				req := httptest.NewRequest(http.MethodGet, "/v1/links/redirect/123456", nil)
@@ -77,7 +107,7 @@ func TestShortenURL(t *testing.T) {
 			expectedResponseBody: "https://example.com",
 		},
 		{
-			name: "failed case redirect",
+			name: "failed case",
 			setupTestHTTP: func(api api.Engine) *httptest.ResponseRecorder {
 				req := httptest.NewRequest(http.MethodGet, "/v1/links/redirect/123456", nil)
 				respRecorder := httptest.NewRecorder()
@@ -90,7 +120,7 @@ func TestShortenURL(t *testing.T) {
 				return mock
 			},
 			expectedStatusCode:   http.StatusInternalServerError,
-			expectedResponseBody: `{"message":"Processing error"}`,
+			expectedResponseBody: `{"error":"Internal server error"}`,
 		},
 	}
 

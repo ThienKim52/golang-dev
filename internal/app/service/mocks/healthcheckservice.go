@@ -5,7 +5,7 @@ package mocks_genpass
 import (
 	context "context"
 
-	service "github.com/ThienKim52/golang-dev/internal/service"
+	service "github.com/ThienKim52/golang-dev/internal/app/service"
 	mock "github.com/stretchr/testify/mock"
 )
 

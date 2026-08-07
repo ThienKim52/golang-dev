@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ThienKim52/golang-dev/internal/service"
-	mocks_healthcheck "github.com/ThienKim52/golang-dev/internal/service/mocks"
+	"github.com/ThienKim52/golang-dev/internal/app/service"
+	mocks_healthcheck "github.com/ThienKim52/golang-dev/internal/app/service/mocks"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

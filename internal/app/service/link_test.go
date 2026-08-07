@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ThienKim52/golang-dev/internal/repository"
+	"github.com/ThienKim52/golang-dev/internal/app/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

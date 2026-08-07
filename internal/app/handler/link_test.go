@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	mocks_linkservice "github.com/ThienKim52/golang-dev/internal/service/mocks"
+	mocks_linkservice "github.com/ThienKim52/golang-dev/internal/app/service/mocks"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

@@ -6,13 +6,18 @@ import (
 	"sync"
 
 	"github.com/ThienKim52/golang-dev/docs"
-	"github.com/ThienKim52/golang-dev/internal/handler"
-	"github.com/ThienKim52/golang-dev/internal/repository"
-	"github.com/ThienKim52/golang-dev/internal/service"
+	"github.com/ThienKim52/golang-dev/internal/app/handler"
+	"github.com/ThienKim52/golang-dev/internal/app/repository"
+	"github.com/ThienKim52/golang-dev/internal/app/service"
+	userSvc "github.com/ThienKim52/golang-dev/internal/app/service/user"
+	repo "github.com/ThienKim52/golang-dev/internal/app/repository/user"
+	userHdl "github.com/ThienKim52/golang-dev/internal/app/handler/user"
+	"github.com/ThienKim52/golang-dev/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"gorm.io/gorm"
 )
 
 var swaggerOnce sync.Once
@@ -27,6 +32,7 @@ type engine struct {
 	app         *gin.Engine
 	config      *Config
 	redisClient *redis.Client
+	db *gorm.DB
 }
 
 // Constructor
@@ -40,11 +46,12 @@ func NewEngine(config *Config, redisClient *redis.Client) Engine {
 	return app
 }
 
-func New(gin *gin.Engine, config *Config, redisClient *redis.Client) Engine {
+func New(gin *gin.Engine, config *Config, redisClient *redis.Client, db *gorm.DB) Engine {
 	app := &engine{
 		app:         gin,
 		config:      config,
 		redisClient: redisClient,
+		db: db,
 	}
 	app.initRoutes()
 	return app
@@ -72,11 +79,17 @@ func (e *engine) initHandlers() *allHandlers{
 	// URL shortening endpoint
 	linkSvc := service.NewLinkService(linkRepo, genPassSvc)
 	linkHdl := handler.NewLinkHandler(linkSvc)
+	// Register user endpoint
+	userRepo := repo.NewSqlRepository(e.db)
+	hasher := utils.NewHasher()
+	userService := userSvc.NewService(userRepo, hasher)
+	userHdl := userHdl.NewHandler(userService)
 
 	return &allHandlers{
 		healthCheckSvcHdl: healthCheckSvcHdl,
 		genPassHdl:        genPassHdl,
 		linkHdl:           linkHdl,
+		userHdl:           userHdl,
 	}
 }
 
@@ -84,6 +97,7 @@ type allHandlers struct {
 	healthCheckSvcHdl handler.HealthCheckHandler
 	genPassHdl        handler.GenPass
 	linkHdl           handler.LinkHandler
+	userHdl           userHdl.Handler
 }
 
 // Initialize routes
@@ -102,6 +116,7 @@ func (e *engine) initRoutes() {
 		// Link-related
 		v1Routes.POST("/links/shorten", allHandlers.linkHdl.ShortenURL)
 		v1Routes.GET("/links/redirect/:code", allHandlers.linkHdl.Redirect)
+		v1Routes.POST("/users/register", allHandlers.userHdl.Register)
 	}
 
 	// Swagger documentation route

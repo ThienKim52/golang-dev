@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/ThienKim52/golang-dev/internal/repository"
+	"github.com/ThienKim52/golang-dev/internal/app/repository"
 	"time"
 )
 

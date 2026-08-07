@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ThienKim52/golang-dev/internal/repository"
-	"github.com/ThienKim52/golang-dev/internal/service"
+	"github.com/ThienKim52/golang-dev/internal/app/repository"
+	"github.com/ThienKim52/golang-dev/internal/app/service"
 	"github.com/ThienKim52/golang-dev/response"
 	"github.com/gin-gonic/gin"
 	log "github.com/rs/zerolog/log"

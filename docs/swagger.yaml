@@ -11,6 +11,22 @@ definitions:
     - exp
     - url
     type: object
+  user.registerInput:
+    properties:
+      display_name:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - display_name
+    - email
+    - password
+    - username
+    type: object
 info:
   contact: {}
   description: This is a health check API server.
@@ -93,4 +109,22 @@ paths:
       summary: Shorten a URL
       tags:
       - links
+  /v1/users/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with the provided information
+      parameters:
+      - description: User registration details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/user.registerInput'
+      produces:
+      - application/json
+      responses: {}
+      summary: Register a new user
+      tags:
+      - User
 swagger: "2.0"

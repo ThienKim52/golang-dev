@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	mocks_genpass "github.com/ThienKim52/golang-dev/internal/service/mocks"
+	mocks_genpass "github.com/ThienKim52/golang-dev/internal/app/service/mocks"
 )
 
 var testErr = errors.New("test error")

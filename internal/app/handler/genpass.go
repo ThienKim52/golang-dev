@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/ThienKim52/golang-dev/internal/service"
+	"github.com/ThienKim52/golang-dev/internal/app/service"
 	"github.com/ThienKim52/golang-dev/response"
 	log "github.com/rs/zerolog/log"
 )

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/ThienKim52/golang-dev/internal/repository"
+	"github.com/ThienKim52/golang-dev/internal/app/repository"
 )
 
 //go:generate mockery --name=HealthCheckService --filename=healthcheckservice.go --outpkg=mocks_genpass
